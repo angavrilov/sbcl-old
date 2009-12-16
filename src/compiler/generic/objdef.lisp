@@ -356,6 +356,15 @@
   (real :c-type "double" :length #!-x86-64 2 #!+x86-64 1)
   (imag :c-type "double" :length #!-x86-64 2 #!+x86-64 1))
 
+#!+sb-sse-intrinsics
+(define-primitive-object (sse-pack
+                          :lowtag other-pointer-lowtag
+                          :widetag sse-pack-widetag
+                          :alloc-trans %make-sse-pack)
+  (filler)
+  (lo-value :c-type "long" :type (unsigned-byte 64) :init :arg)
+  (hi-value :c-type "long" :type (unsigned-byte 64) :init :arg))
+
 #!+(and sb-lutex sb-thread)
 (define-primitive-object (lutex
                           :lowtag other-pointer-lowtag
