@@ -466,6 +466,9 @@
      (output-code-component object stream))
     (fdefn
      (output-fdefn object stream))
+    #!+sb-sse-intrinsics
+    (sse-pack
+     (output-sse-pack object stream))
     (t
      (output-random object stream))))
 
@@ -1677,6 +1680,20 @@
   (print-unreadable-object (fdefn stream)
     (write-string "FDEFINITION object for " stream)
     (output-object (fdefn-name fdefn) stream)))
+
+#!+sb-sse-intrinsics
+(defun output-sse-pack (pack stream)
+  (declare (type sse-pack pack))
+  (cond (*read-eval*
+         (format stream "#.(~S #X~16,'0X #X~16,'0X)"
+                 '%make-sse-pack
+                 (%sse-pack-low  pack)
+                 (%sse-pack-high pack)))
+        (t
+         (print-unreadable-object (pack stream)
+           (format stream "SSE pack: #X~16,'0X:#X~16,'0X"
+                   (%sse-pack-low  pack)
+                   (%sse-pack-high pack))))))
 
 ;;;; functions
 
