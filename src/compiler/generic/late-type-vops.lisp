@@ -64,13 +64,18 @@
                                      sse-pack-widetag
                                      sse-pack-size
                                      node)
-               (let ((ea (make-ea-for-object-slot
+               (let ((ta (make-ea-for-object-slot
+                          result sse-pack-type-code-slot other-pointer-lowtag))
+                     (ea (make-ea-for-object-slot
                           result sse-pack-lo-value-slot other-pointer-lowtag)))
                  (cond ((float-sse-pack-tn-p value)
+                        (inst mov ta 1)
                         (inst movaps ea value))
                        ((double-sse-pack-tn-p value)
+                        (inst mov ta 2)
                         (inst movapd ea value))
                        (t
+                        (inst mov ta 0)
                         (inst movdqa ea value))))))))
          ((any-reg descriptor-reg)
           (let ((leaf (sb!c::tn-leaf value)))

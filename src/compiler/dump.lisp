@@ -392,6 +392,7 @@
              (sse-pack
               (unless (equal-check-table x file)
                 (dump-fop 'fop-sse-pack file)
+                (dump-integer-as-n-bytes (%sse-pack-type-code x) 1 file)
                 (dump-integer-as-n-bytes (%sse-pack-low  x) 8 file)
                 (dump-integer-as-n-bytes (%sse-pack-high x) 8 file))
               (equal-save-object x file))

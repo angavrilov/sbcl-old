@@ -360,7 +360,7 @@
 (define-primitive-object (sse-pack
                           :lowtag other-pointer-lowtag
                           :widetag sse-pack-widetag)
-  (filler)
+  (type-code :c-type "long" :type (integer 0 2)) ; also filler
   (lo-value :c-type "long" :type (unsigned-byte 64))
   (hi-value :c-type "long" :type (unsigned-byte 64)))
 

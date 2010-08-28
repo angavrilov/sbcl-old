@@ -1082,7 +1082,7 @@
      (sse-pack
       :translation sse-pack
       :codes (#.sb!vm:sse-pack-widetag)
-      :prototype-form (%make-sse-pack 42 42))
+      :prototype-form (%make-sse-pack 0 42 42))
      (real :translation real :inherits (number))
      (float
       :translation float

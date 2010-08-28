@@ -73,13 +73,18 @@
                              sse-pack-widetag
                              sse-pack-size
                              node)
-       (let ((ea (make-ea-for-object-slot
+       (let ((ta (make-ea-for-object-slot
+                  result sse-pack-type-code-slot other-pointer-lowtag))
+             (ea (make-ea-for-object-slot
                   result sse-pack-lo-value-slot other-pointer-lowtag)))
          (cond ((float-sse-pack-tn-p value)
+                (inst mov ta 1)
                 (inst movaps ea value))
                ((double-sse-pack-tn-p value)
+                (inst mov ta 2)
                 (inst movapd ea value))
                (t
+                (inst mov ta 0)
                 (inst movdqa ea value)))))))
 (define-move-vop move-from-sse :move
   (sse-reg) (descriptor-reg))
@@ -159,27 +164,51 @@
   (declare (type sse-pack x))
   (%sse-pack-high x))
 
+(define-vop (%sse-pack-type-code)
+  (:translate %sse-pack-type-code)
+  (:policy :fast-safe)
+  (:args (value :scs (descriptor-reg)))
+  (:arg-types sse-pack)
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:generator 2
+    (let ((ea (make-ea-for-object-slot
+               value sse-pack-type-code-slot other-pointer-lowtag)))
+      (inst mov result ea))))
+
+(defun %sse-pack-type-code (x)
+  (declare (type sse-pack x))
+  (truly-the (mod 3) (%sse-pack-type-code x)))
+
 (define-vop (%make-sse-pack)
   (:translate %make-sse-pack)
   (:policy :fast-safe)
-  (:args (lo :scs (unsigned-reg))
+  (:args (tc :scs (unsigned-reg))
+         (lo :scs (unsigned-reg))
          (hi :scs (unsigned-reg)))
-  (:arg-types unsigned-num unsigned-num)
-  (:temporary (:sc sse-stack :target dst :to :result) tmp)
-  (:results (dst :scs (sse-reg sse-stack)))
+  (:arg-types unsigned-num unsigned-num unsigned-num)
+  (:results (result :scs (descriptor-reg) :from :load))
   (:result-types sse-pack)
-  (:generator 5
-    (let ((offset (- (* (1+ (tn-offset tmp))
-                        n-word-bytes))))
-      (inst mov (make-ea :qword :base rbp-tn :disp (- offset 8)) lo)
-      (inst mov (make-ea :qword :base rbp-tn :disp offset) hi))
-    (unless (location= dst tmp)
-      (inst movdqu dst (ea-for-sse-stack tmp)))))
+  (:node-var node)
+  (:generator 13
+    (with-fixed-allocation (result
+                            sse-pack-widetag
+                            sse-pack-size
+                            node)
+       (let ((ta (make-ea-for-object-slot
+                  result sse-pack-type-code-slot other-pointer-lowtag))
+             (la (make-ea-for-object-slot
+                  result sse-pack-lo-value-slot other-pointer-lowtag))
+             (ha (make-ea-for-object-slot
+                  result sse-pack-hi-value-slot other-pointer-lowtag)))
+         (inst mov ta tc)
+         (inst mov la lo)
+         (inst mov ha hi)))))
 
-(defun %make-sse-pack (low high)
-  (declare (type (unsigned-byte 64) low high))
-  (%make-sse-pack low high))
-
+(defun %make-sse-pack (tc low high)
+  (declare (type (unsigned-byte 64) low high)
+           (type (integer 0 2) tc))
+  (%make-sse-pack tc low high))
 
 #|
 (defknown widen-sse-type (sse-pack) sse-pack)

@@ -1684,8 +1684,9 @@
 (defun output-sse-pack (pack stream)
   (declare (type sse-pack pack))
   (cond (*read-eval*
-         (format stream "#.(~S #X~16,'0X #X~16,'0X)"
+         (format stream "#.(~S ~A #X~16,'0X #X~16,'0X)"
                  '%make-sse-pack
+                 (%sse-pack-type-code pack)
                  (%sse-pack-low  pack)
                  (%sse-pack-high pack)))
         (t
