@@ -200,7 +200,11 @@
       sse-pack)
   (defknown (%sse-pack-type-code) (sse-pack) (integer 0 2))
   (defknown (%sse-pack-low %sse-pack-high) (sse-pack) (unsigned-byte 64))
-  (defknown (float-sse-pack-tn-p double-sse-pack-tn-p int-sse-pack-tn-p) (t) boolean))
+  (defknown (float-sse-pack-tn-p double-sse-pack-tn-p int-sse-pack-tn-p) (t) boolean)
+  (defknown (%sse-pack-floats) (sse-pack)
+      (values single-float single-float single-float single-float))
+  (defknown (%sse-pack-doubles) (sse-pack)
+      (values double-float double-float)))
 
 ;;;; threading
 

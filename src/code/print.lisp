@@ -1683,7 +1683,8 @@
 #!+sb-sse-intrinsics
 (defun output-sse-pack (pack stream)
   (declare (type sse-pack pack))
-  (cond (*read-eval*
+  (cond #+nil
+        (*read-eval*
          (format stream "#.(~S ~A #X~16,'0X #X~16,'0X)"
                  '%make-sse-pack
                  (%sse-pack-type-code pack)
@@ -1691,9 +1692,16 @@
                  (%sse-pack-high pack)))
         (t
          (print-unreadable-object (pack stream)
-           (format stream "SSE pack: #X~16,'0X:#X~16,'0X"
-                   (%sse-pack-low  pack)
-                   (%sse-pack-high pack))))))
+           (case (%sse-pack-type-code pack)
+             (1 (multiple-value-bind (v0 v1 v2 v3)
+                    (%sse-pack-floats pack)
+                  (format stream "SSE pack: ~,7E ~,7E ~,7E ~,7E" v0 v1 v2 v3)))
+             (2 (multiple-value-bind (v0 v1)
+                    (%sse-pack-doubles pack)
+                  (format stream "SSE pack: ~,13E ~,13E" v0 v1)))
+             (t (format stream "SSE pack: #X~16,'0X:#X~16,'0X"
+                        (%sse-pack-low  pack)
+                        (%sse-pack-high pack))))))))
 
 ;;;; functions
 
