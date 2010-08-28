@@ -292,7 +292,7 @@
              (sequence-bounding-indices-bad-error vector start end)))))
 
 (def!type eq-comparable-type ()
-  '(or fixnum (not number)))
+  '(or fixnum (not (or number #!+sb-sse-intrinsics sse-pack))))
 
 ;;; True if EQL comparisons involving type can be simplified to EQ.
 (defun eq-comparable-type-p (type)
@@ -496,7 +496,11 @@
            (give-up-ir1-transform)))
         ((types-equal-or-intersect (lvar-type item)
                                    (specifier-type 'number))
-         (give-up-ir1-transform "Item might be a number.")))
+         (give-up-ir1-transform "Item might be a number."))
+        #!+sb-sse-intrinsics
+        ((types-equal-or-intersect (lvar-type item)
+                                   (specifier-type 'sse-pack))
+         (give-up-ir1-transform "Item might be an sse pack.")))
   `(delq item list))
 
 (deftransform delete-if ((pred list) (t list))
