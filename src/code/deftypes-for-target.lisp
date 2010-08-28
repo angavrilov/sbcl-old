@@ -211,4 +211,11 @@
 (sb!xc:deftype double-float-significand ()
   `(integer 0 (,(ash 1 sb!vm:double-float-digits))))
 
+#!+sb-sse-intrinsics
+(sb!xc:deftype int-sse-pack () '(sse-pack integer))
+#!+sb-sse-intrinsics
+(sb!xc:deftype float-sse-pack () '(sse-pack single-float))
+#!+sb-sse-intrinsics
+(sb!xc:deftype double-sse-pack () '(sse-pack double-float))
+
 (/show0 "deftypes-for-target.lisp end of file")

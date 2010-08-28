@@ -29,10 +29,12 @@
          #!+sb-sse-intrinsics
          ((sse-reg sse-stack)
           (aver (xmm-register-p ,n-src))
-          (if (or (eq (sb!c::tn-primitive-type ,n-dst) 'float-sse-pack)
-                  (eq (sb!c::tn-primitive-type ,n-src) 'float-sse-pack))
-              (inst movaps ,n-dst ,n-src)
-              (inst movdqa ,n-dst ,n-src)))
+          (cond ((float-sse-pack-tn-p ,n-dst)
+                 (inst movaps ,n-dst ,n-src))
+                ((double-sse-pack-tn-p ,n-dst)
+                 (inst movapd ,n-dst ,n-src))
+                (t
+                 (inst movdqa ,n-dst ,n-src))))
          (t
           (inst mov ,n-dst ,n-src))))))
 

@@ -17,29 +17,40 @@
                           2)
                        n-word-bytes))))
 
-(defun float-sse-pack-p (tn)
+(defun float-sse-pack-tn-p (tn)
   (eq (sb!c::tn-primitive-type tn) (primitive-type-or-lose 'float-sse-pack)))
-(defun int-sse-pack-p (tn)
+(defun double-sse-pack-tn-p (tn)
+  (eq (sb!c::tn-primitive-type tn) (primitive-type-or-lose 'double-sse-pack)))
+(defun int-sse-pack-tn-p (tn)
   (eq (sb!c::tn-primitive-type tn) (primitive-type-or-lose 'int-sse-pack)))
 
 (define-move-fun (load-sse-pack-immediate 1) (vop x y)
   ((sse-pack-immediate) (sse-reg))
   (let ((x (register-inline-constant (tn-value x))))
-    (if (float-sse-pack-p y)
-        (inst movaps y x)
-        (inst movdqa y x))))
+    (cond ((float-sse-pack-tn-p y)
+           (inst movaps y x))
+          ((double-sse-pack-tn-p y)
+           (inst movapd y x))
+          (t
+           (inst movdqa y x)))))
 
 (define-move-fun (load-sse-pack 2) (vop x y)
-    ((sse-stack) (sse-reg))
-  (if (or (float-sse-pack-p x) (float-sse-pack-p y))
-      (inst movups y (ea-for-sse-stack x))
-      (inst movdqu y (ea-for-sse-stack x))))
+  ((sse-stack) (sse-reg))
+  (cond ((float-sse-pack-tn-p y)
+         (inst movups y (ea-for-sse-stack x)))
+        ((double-sse-pack-tn-p y)
+         (inst movupd y (ea-for-sse-stack x)))
+        (t
+         (inst movdqu y (ea-for-sse-stack x)))))
 
 (define-move-fun (store-sse-pack 2) (vop x y)
   ((sse-reg) (sse-stack))
-  (if (or (float-sse-pack-p x) (float-sse-pack-p y))
-      (inst movups (ea-for-sse-stack y) x)
-      (inst movdqu (ea-for-sse-stack y) x)))
+  (cond ((float-sse-pack-tn-p x)
+         (inst movups (ea-for-sse-stack y) x))
+        ((double-sse-pack-tn-p x)
+         (inst movupd (ea-for-sse-stack y) x))
+        (t
+         (inst movdqu (ea-for-sse-stack y) x))))
 
 (define-vop (sse-pack-move)
   (:args (x :scs (sse-reg)
@@ -53,33 +64,39 @@
 (define-move-vop sse-pack-move :move (sse-reg) (sse-reg))
 
 (define-vop (move-from-sse)
-  (:args (x :scs (sse-reg)))
-  (:results (y :scs (descriptor-reg)))
+  (:args (value :scs (sse-reg)))
+  (:results (result :scs (descriptor-reg)))
   (:node-var node)
   (:note "SSE to pointer coercion")
   (:generator 13
-     (with-fixed-allocation (y
+     (with-fixed-allocation (result
                              sse-pack-widetag
                              sse-pack-size
                              node)
        (let ((ea (make-ea-for-object-slot
-                  y sse-pack-lo-value-slot other-pointer-lowtag)))
-         (if (float-sse-pack-p x)
-             (inst movaps ea x)
-             (inst movdqa ea x))))))
+                  result sse-pack-lo-value-slot other-pointer-lowtag)))
+         (cond ((float-sse-pack-tn-p value)
+                (inst movaps ea value))
+               ((double-sse-pack-tn-p value)
+                (inst movapd ea value))
+               (t
+                (inst movdqa ea value)))))))
 (define-move-vop move-from-sse :move
   (sse-reg) (descriptor-reg))
 
 (define-vop (move-to-sse)
-  (:args (x :scs (descriptor-reg)))
-  (:results (y :scs (sse-reg)))
+  (:args (value :scs (descriptor-reg)))
+  (:results (result :scs (sse-reg)))
   (:note "pointer to SSE coercion")
   (:generator 2
     (let ((ea (make-ea-for-object-slot
-               x sse-pack-lo-value-slot other-pointer-lowtag)))
-      (if (float-sse-pack-p y)
-          (inst movaps y ea)
-          (inst movdqa y ea)))))
+               value sse-pack-lo-value-slot other-pointer-lowtag)))
+      (cond ((float-sse-pack-tn-p result)
+             (inst movaps result ea))
+            ((double-sse-pack-tn-p result)
+             (inst movapd result ea))
+            (t
+             (inst movdqa result ea))))))
 (define-move-vop move-to-sse :move (descriptor-reg) (sse-reg))
 
 (define-vop (move-sse-arg)
@@ -92,14 +109,19 @@
      (sc-case y
        (sse-reg
         (unless (location= x y)
-          (if (or (float-sse-pack-p x)
-                  (float-sse-pack-p y))
-              (inst movaps y x)
-              (inst movdqa y x))))
+          (cond ((float-sse-pack-tn-p y)
+                 (inst movaps y x))
+                ((double-sse-pack-tn-p y)
+                 (inst movapd y x))
+                (t
+                 (inst movdqa y x)))))
        (sse-stack
-        (if (float-sse-pack-p x)
-            (inst movups (ea-for-sse-stack y fp) x)
-            (inst movdqu (ea-for-sse-stack y fp) x))))))
+        (cond ((float-sse-pack-tn-p x)
+               (inst movups (ea-for-sse-stack y fp) x))
+              ((double-sse-pack-tn-p x)
+               (inst movupd (ea-for-sse-stack y fp) x))
+              (t
+               (inst movdqu (ea-for-sse-stack y fp) x)))))))
 (define-move-vop move-sse-arg :move-arg
   (sse-reg descriptor-reg) (sse-reg))
 

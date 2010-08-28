@@ -99,10 +99,12 @@
 (progn
   (/show0 "about to !DEF-PRIMITIVE-TYPE SSE-PACK")
   (!def-primitive-type float-sse-pack (sse-reg descriptor-reg)
-   :type (sse-pack float))
+   :type (sse-pack single-float))
+  (!def-primitive-type double-sse-pack (sse-reg descriptor-reg)
+   :type (sse-pack double-float))
   (!def-primitive-type int-sse-pack (sse-reg descriptor-reg)
    :type (sse-pack integer))
-  (!def-primitive-type-alias sse-pack (:or float-sse-pack int-sse-pack)))
+  (!def-primitive-type-alias sse-pack (:or float-sse-pack double-sse-pack int-sse-pack)))
 
 ;;; primitive other-pointer array types
 (/show0 "primtype.lisp 96")
@@ -384,9 +386,10 @@
         ;; values should be moved around (movaps vs movdqa).
         #!+sb-sse-intrinsics
         (sse-pack-type
-           (if (eql 'float (sse-pack-type-supertype type))
-               (exactly float-sse-pack)
-               (exactly int-sse-pack)))
+         (case (sse-pack-type-supertype type)
+           (single-float (exactly float-sse-pack))
+           (double-float (exactly double-sse-pack))
+           (t (exactly int-sse-pack))))
         (built-in-classoid
          (case (classoid-name type)
            #!+sb-sse-intrinsics

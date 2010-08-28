@@ -66,9 +66,12 @@
                                      node)
                (let ((ea (make-ea-for-object-slot
                           result sse-pack-lo-value-slot other-pointer-lowtag)))
-                 (if (float-sse-pack-p value)
-                     (inst movaps ea value)
-                     (inst movdqa ea value)))))))
+                 (cond ((float-sse-pack-tn-p value)
+                        (inst movaps ea value))
+                       ((double-sse-pack-tn-p value)
+                        (inst movapd ea value))
+                       (t
+                        (inst movdqa ea value))))))))
          ((any-reg descriptor-reg)
           (let ((leaf (sb!c::tn-leaf value)))
             (unless (and (sb!c::lvar-p leaf)
@@ -82,12 +85,15 @@
             ((sse-reg)
              (let ((ea (make-ea-for-object-slot
                         value sse-pack-lo-value-slot other-pointer-lowtag)))
-               (if (float-sse-pack-p result)
-                   (inst movaps result ea)
-                   (inst movdqa result ea))))
+               (cond ((float-sse-pack-tn-p result)
+                      (inst movaps result ea))
+                     ((double-sse-pack-tn-p result)
+                      (inst movapd result ea))
+                     (t
+                      (inst movdqa result ea)))))
             ((any-reg descriptor-reg)
              (move result value)))))))
-  (primitive-type-vop check-sse-pack (:check) int-sse-pack float-sse-pack)
+  (primitive-type-vop check-sse-pack (:check) int-sse-pack float-sse-pack double-sse-pack)
 
   #+nil
   (!define-type-vops nil check-sse-pack int-sse-pack   object-not-sse-pack-error

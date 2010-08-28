@@ -535,22 +535,29 @@
               %make-sse-pack-type (element-type supertype))
              (:copier nil))
   (element-type (missing-arg) :type ctype :read-only t)
-  (supertype    (missing-arg) :type (member float t) :read-only t))
+  (supertype    (missing-arg) :type (member single-float double-float integer t) :read-only t))
 
 #!+sb-sse-intrinsics
 (defun make-sse-pack-type (element-type)
   (aver (neq element-type *wild-type*))
   (if (eq element-type *empty-type*)
       *empty-type*
-      (%make-sse-pack-type element-type
-                           (if (csubtypep element-type
-                                          (specifier-type `(or float
-                                                               (complex short-float)
-                                                               (complex single-float)
-                                                               (complex double-float)
-                                                               (complex long-float))))
-                               'float
-                               't))))
+      (%make-sse-pack-type (or element-type *universal-type*)
+                           (cond ((null element-type) 't)
+                                 ((csubtypep element-type
+                                             (specifier-type `(or double-float
+                                                                  long-float
+                                                                  (complex double-float)
+                                                                  (complex long-float))))
+                                  'double-float)
+                                 ((csubtypep element-type
+                                             (specifier-type `(or float
+                                                                  (complex short-float)
+                                                                  (complex single-float))))
+                                  'single-float)
+                                 ((csubtypep element-type (specifier-type 'integer))
+                                  'integer)
+                                 (t 't)))))
 
 
 ;;;; type utilities

@@ -198,8 +198,8 @@
   (defknown sse-pack-p (t) boolean (foldable flushable))
   (defknown %make-sse-pack ((unsigned-byte 64) (unsigned-byte 64))
       sse-pack)
-  (defknown (%sse-pack-low %sse-pack-high) (sse-pack)
-      (unsigned-byte 64)))
+  (defknown (%sse-pack-low %sse-pack-high) (sse-pack) (unsigned-byte 64))
+  (defknown (float-sse-pack-tn-p double-sse-pack-tn-p int-sse-pack-tn-p) (t) boolean))
 
 ;;;; threading
 
