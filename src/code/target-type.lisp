@@ -175,6 +175,13 @@
      (make-cons-type *universal-type* *universal-type*))
     (character
      (specifier-type 'character))
+    #!+sb-sse-intrinsics
+    (sse-pack
+     (make-sse-pack-type
+      (specifier-type (ecase (%sse-pack-type-code x)
+                        (0 'integer)
+                        (1 'single-float)
+                        (2 'double-float)))))
     (t
      (classoid-of x))))
 

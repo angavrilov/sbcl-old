@@ -275,6 +275,16 @@
                   :format-control "~S is a special operator."
                   :format-arguments (list object)))
          (eval `#',object))
+        #!+sb-sse-intrinsics
+        ((csubtypep type (specifier-type 'sse-pack))
+         (if (sse-pack-p object)
+             (%make-sse-pack (case (%sse-pack-type-supertype type)
+                               (single-float 1)
+                               (double-float 2)
+                               (otherwise 0))
+                             (%sse-pack-low object)
+                             (%sse-pack-high object))
+             (coerce-error)))
         (t
          (coerce-error))))))
 

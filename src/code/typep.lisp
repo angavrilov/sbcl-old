@@ -123,7 +123,12 @@
           (%%typep (cdr object) (cons-type-cdr-type type) strict)))
     #!+sb-sse-intrinsics
     (sse-pack-type
-     (sse-pack-p object))
+     (and (sse-pack-p object)
+          (case (sse-pack-type-supertype type)
+            (single-float (eq (%sse-pack-type-code object) 1))
+            (double-float (eq (%sse-pack-type-code object) 2))
+            (integer      (eq (%sse-pack-type-code object) 0))
+            (otherwise t))))
     (character-set-type
      (and (characterp object)
          (let ((code (char-code object))

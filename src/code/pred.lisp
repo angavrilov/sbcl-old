@@ -173,7 +173,7 @@
     (extended-char 'extended-char)
     ((member t) 'boolean)
     (keyword 'keyword)
-    ((or array complex)
+    ((or array complex #!+sb-sse-intrinsics)
      (type-specifier (ctype-of object)))
     (t
      (let* ((classoid (layout-classoid (layout-of object)))
@@ -235,7 +235,8 @@
              #!+sb-sse-intrinsics
              (sse-pack
               (lambda (x y)
-                (and (eql (%sse-pack-low x) (%sse-pack-low y))
+                (and (eql (%sse-pack-type-code x) (%sse-pack-type-code y))
+                     (eql (%sse-pack-low x) (%sse-pack-low y))
                      (eql (%sse-pack-high x) (%sse-pack-high y))))))))))
 
 (defun eql (x y)
