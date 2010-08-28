@@ -231,7 +231,12 @@
              (complex
               (lambda (x y)
                 (and (eql (realpart x) (realpart y))
-                     (eql (imagpart x) (imagpart y))))))))))
+                     (eql (imagpart x) (imagpart y)))))
+             #!+sb-sse-intrinsics
+             (sse-pack
+              (lambda (x y)
+                (and (eql (%sse-pack-low x) (%sse-pack-low y))
+                     (eql (%sse-pack-high x) (%sse-pack-high y))))))))))
 
 (defun eql (x y)
   (%eql x y))
