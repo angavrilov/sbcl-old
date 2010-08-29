@@ -252,7 +252,107 @@
   (values (%primitive %sse-pack-double-item pack 0)
           (%primitive %sse-pack-double-item pack 1)))
 
+
+(macrolet ((frob (fname atype aregtype rtype move &rest epilog)
+             `(progn
+                (defknown ,fname (,atype) ,rtype (foldable flushable))
+                (define-vop (,fname)
+                  (:translate ,fname)
+                  (:args (arg :scs (,aregtype) :target dst))
+                  (:arg-types ,atype)
+                  (:results (dst :scs (sse-reg)))
+                  (:result-types ,rtype)
+                  (:policy :fast-safe)
+                  (:generator 1
+                    (unless (location= dst arg)
+                      (inst ,move dst arg))
+                    ,@epilog))
+                (defun ,fname (arg)
+                  (declare (type ,atype arg))
+                  (,fname arg)))))
+  (frob %set-ss single-float single-reg float-sse-pack movaps)
+  (frob %set-sd double-float double-reg double-sse-pack movapd))
+
+(declaim (ftype (function (real) float-sse-pack) set-ss)
+         (inline set-ss)
+         (ftype (function (real) double-sse-pack) set-sd)
+         (inline set-sd))
+
+(defun set-ss (arg) (%set-ss (coerce arg 'single-float)))
+(defun set-sd (arg) (%set-sd (coerce arg 'double-float)))
+
+(defknown xor-ps (sse-pack sse-pack) (sse-pack single-float))
+
+(define-vop (xor-ps)
+  (:policy :fast-safe)
+  (:translate xor-ps)
+  (:args (x :scs (sse-reg) :target r)
+         (y :scs (sse-reg)))
+  (:arg-types sse-pack sse-pack)
+  (:results (r :scs (sse-reg)))
+  (:result-types float-sse-pack)
+  (:generator 1
+     (cond ((location= x r)
+            (inst xorps r y))
+           ((location= y r)
+            (inst xorps r x))
+           (t
+            (inst movaps r x)
+            (inst xorps r y)))))
+
+(defun xor-ps (a b)
+  (declare (type sse-pack a b))
+  (xor-ps a b))
+
+(defknown xor-pd (sse-pack sse-pack) (sse-pack double-float))
+
+(define-vop (xor-pd)
+  (:policy :fast-safe)
+  (:translate xor-pd)
+  (:args (x :scs (sse-reg) :target r)
+         (y :scs (sse-reg)))
+  (:arg-types double-sse-pack double-sse-pack)
+  (:results (r :scs (sse-reg)))
+  (:result-types double-sse-pack)
+  (:generator 1
+     (cond ((location= x r)
+            (inst xorpd r y))
+           ((location= y r)
+            (inst xorpd r x))
+           (t
+            (inst movaps r x)
+            (inst xorpd r y)))))
+
+(defun xor-pd (a b)
+  (declare (type double-sse-pack a b))
+  (xor-pd a b))
+
 #|
+
+Compiles to a bad load:
+
+(defun foo (x) (declare (type double-float x)) (sb-vm::xor-ps (sb-vm::set-ss x) (sb-vm::set-ss 234.5)))
+(defun foo (x) (declare (type double-float x)) (sb-vm::xor-ps (sb-vm::set-ss x) (the sb-kernel:float-sse-pack (sb-vm::set-ss 234.5))))
+(defun foo (x) (declare (type double-float x)) (sb-vm::xor-ps (sb-vm::set-ss x) (the sb-kernel:float-sse-pack #.(sb-vm::set-ss 234.5))))
+(defun foo (x) (declare (type double-float x)) (sb-vm::xor-ps (sb-vm::set-ss x) (truly-the sb-kernel:float-sse-pack #.(sb-vm::set-ss 234.5))))
+
+; disassembly for FOO
+; 02D349C9:       0F57C9           XORPS XMM1, XMM1           ; no-arg-parsing entry point
+;      9CC:       F20F5AC8         CVTSD2SS XMM1, XMM0
+;      9D0:       660F6F1578000000 MOVDQA XMM2, [RIP+120]
+;      9D8:       0F57CA           XORPS XMM1, XMM2
+
+|#
+
+#|
+
+
+                (deftransform ,fname ((obj) ((constant-arg real)))
+                  (,fname (sb!c::lvar-value obj)))
+                (deftransform ,fname ((obj) ((or ,@(remove atype '(integer single-float double-float)))))
+`(,',fname (coerce obj ',',atype)))
+
+
 (defknown widen-sse-type (sse-pack) sse-pack)
 (define-vop (widen-sse-type)
   (:policy :fast-safe)
