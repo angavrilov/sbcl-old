@@ -1172,6 +1172,55 @@
   (reg     :field (byte 3 35)   :type 'xmmreg)
   (imm     :type 'imm-byte))
 
+(sb!disassem:define-instruction-format (ext-xmm-reg/mem-imm 32
+                                        :default-printer
+                                        '(:name :tab reg ", " reg/mem ", " imm))
+  (prefix  :field (byte 8 0))
+  (x0f     :field (byte 8 8)    :value #x0f)
+  (op      :field (byte 8 16))
+  (reg/mem :fields (list (byte 2 30) (byte 3 24))
+                                :type 'sized-reg/mem)
+  (reg     :field (byte 3 27)   :type 'xmmreg)
+  (imm     :type 'imm-byte))
+
+(sb!disassem:define-instruction-format (ext-rex-xmm-reg/mem-imm 40
+                                        :default-printer
+                                        '(:name :tab reg ", " reg/mem ", " imm))
+  (prefix  :field (byte 8 0))
+  (rex     :field (byte 4 12)   :value #b0100)
+  (wrxb    :field (byte 4 8)    :type 'wrxb)
+  (x0f     :field (byte 8 16)   :value #x0f)
+  (op      :field (byte 8 24))
+  (reg/mem :fields (list (byte 2 38) (byte 3 32))
+                                :type 'sized-reg/mem)
+  (reg     :field (byte 3 35)   :type 'xmmreg)
+  (imm     :type 'imm-byte))
+
+(sb!disassem:define-instruction-format (ext-reg-xmm/mem-imm 32
+                                        :default-printer
+                                        '(:name :tab reg ", " reg/mem ", " imm))
+  (prefix  :field (byte 8 0))
+  (x0f     :field (byte 8 8)    :value #x0f)
+  (op      :field (byte 8 16))
+  (reg/mem :fields (list (byte 2 30) (byte 3 24))
+                                :type 'sized-xmmreg/mem)
+  (reg     :field (byte 3 27)   :type 'reg)
+  (imm     :type 'imm-byte))
+
+(sb!disassem:define-instruction-format (ext-rex-reg-xmm/mem-imm 40
+                                        :default-printer
+                                        '(:name :tab reg ", " reg/mem ", " imm))
+  (prefix  :field (byte 8 0))
+  (rex     :field (byte 4 12)   :value #b0100)
+  (wrxb    :field (byte 4 8)    :type 'wrxb)
+  (x0f     :field (byte 8 16)   :value #x0f)
+  (op      :field (byte 8 24))
+  (reg/mem :fields (list (byte 2 38) (byte 3 32))
+                                :type 'sized-xmmreg/mem)
+  (reg     :field (byte 3 35)   :type 'reg)
+  (imm     :type 'imm-byte))
+
+
 (sb!disassem:define-instruction-format (string-op 8
                                      :include 'simple
                                      :default-printer '(:name width)))
@@ -3402,6 +3451,25 @@
          (t
           (aver (xmm-register-p src))
           (emit-sse-inst segment src dst #x66 #x7e)))))
+
+(define-instruction pinsrw (segment dst src imm)
+  (:printer ext-xmm-reg/mem-imm ((prefix #x66) (op #xc4)))
+  (:printer ext-rex-xmm-reg/mem-imm ((prefix #x66) (op #xc4)))
+  (:emitter
+   (aver (xmm-register-p dst))
+   (emit-sse-inst segment dst src #x66 #xc4)
+   (emit-byte segment imm)))
+
+(define-instruction pextrw (segment dst src imm)
+  (:printer ext-reg-xmm/mem-imm ((prefix #x66) (op #xc5)))
+  (:printer ext-rex-reg-xmm/mem-imm ((prefix #x66) (op #xc5)))
+  (:emitter
+   (aver (xmm-register-p src))
+   (aver (register-p dst))
+   (let ((dst-size (operand-size dst)))
+     (aver (or (eq dst-size :qword) (eq dst-size :dword)))
+     (emit-sse-inst segment dst src #x66 #xc5 :operand-size dst-size))
+   (emit-byte segment imm)))
 
 (macrolet ((define-integer-source-sse-inst (name prefix opcode &key mem-only)
              `(define-instruction ,name (segment dst src)
